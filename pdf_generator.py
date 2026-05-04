@@ -1,45 +1,48 @@
-from jinja2 import Template
-from weasyprint import HTML
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
 
-def generate_pdf(company, policy, materials, filename="manual.pdf"):
+def generate_pdf(company, policy, materials, filename="IHCS_Manual.pdf"):
 
-    rows = ""
+    doc = SimpleDocTemplate(filename, pagesize=A4)
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    # TITLE
+    elements.append(Paragraph("IHCS MANUAL", styles['Title']))
+    elements.append(Spacer(1, 20))
+
+    # COMPANY
+    elements.append(Paragraph("1. Company Profile", styles['Heading2']))
+    elements.append(Paragraph(f"Name: {company[0]}", styles['Normal']))
+    elements.append(Paragraph(f"Address: {company[1]}", styles['Normal']))
+    elements.append(Paragraph(f"Contact: {company[2]}", styles['Normal']))
+    elements.append(Spacer(1, 15))
+
+    # POLICY
+    elements.append(Paragraph("2. Halal Policy", styles['Heading2']))
+    elements.append(Paragraph(policy, styles['Normal']))
+    elements.append(Spacer(1, 15))
+
+    # MATERIAL TABLE
+    elements.append(Paragraph("3. Raw Material Masterlist", styles['Heading2']))
+
+    table_data = [["Material", "Supplier", "Halal Cert", "Expiry"]]
+
     for m in materials:
-        rows += f"<tr><td>{m[0]}</td><td>{m[1]}</td><td>{m[2]}</td><td>{m[3]}</td></tr>"
+        table_data.append([m[0], m[1], m[2], m[3]])
 
-    html = Template("""
-    <html>
-    <head>
-    <style>
-    body { font-family: Arial; margin:40px;}
-    h1 {text-align:center;}
-    h2 {border-bottom:2px solid black;}
-    table {width:100%; border-collapse: collapse;}
-    th, td {border:1px solid black; padding:8px;}
-    </style>
-    </head>
+    table = Table(table_data)
 
-    <body>
-    <h1>IHCS MANUAL</h1>
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.grey),
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+    ]))
 
-    <h2>Company Profile</h2>
-    <p><b>Name:</b> {{company[0]}}</p>
-    <p><b>Address:</b> {{company[1]}}</p>
-    <p><b>Contact:</b> {{company[2]}}</p>
+    elements.append(table)
 
-    <h2>Halal Policy</h2>
-    <p>{{policy}}</p>
-
-    <h2>Raw Materials</h2>
-    <table>
-    <tr><th>Name</th><th>Supplier</th><th>Halal Cert</th><th>Expiry</th></tr>
-    """ + rows + """
-    </table>
-
-    </body>
-    </html>
-    """).render(company=company, policy=policy)
-
-    HTML(string=html).write_pdf(filename)
+    doc.build(elements)
 
     return filename
