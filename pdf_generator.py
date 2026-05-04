@@ -1,9 +1,5 @@
 from jinja2 import Template
-import pdfkit
-
-config = pdfkit.configuration(
-    wkhtmltopdf=r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"
-)
+from weasyprint import HTML
 
 def generate_pdf(company, policy, materials, filename="manual.pdf"):
 
@@ -44,5 +40,6 @@ def generate_pdf(company, policy, materials, filename="manual.pdf"):
     </html>
     """).render(company=company, policy=policy)
 
-    pdfkit.from_string(html, filename, configuration=config)
+    HTML(string=html).write_pdf(filename)
+
     return filename
