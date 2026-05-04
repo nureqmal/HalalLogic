@@ -3,34 +3,29 @@ import pandas as pd
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import nsdecls
+from docx.oxml import parse_xml
 import io
-from datetime import datetime
 
 # --- SET PAGE CONFIG ---
-st.set_page_config(page_title="HalalLogic 2.0", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="HalalLogic 3.0", layout="wide")
 
-# --- CUSTOM CSS FOR PROFESSIONAL LOOK ---
-st.markdown("""
-    <style>
-    .main { background-color: #f5f7f9; }
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
-    </style>
-    """, unsafe_allow_html=True)
+# --- STYLE HELPERS (UNTUK TIRU DESIGN HJ JAIS) ---
+def set_cell_background(cell, fill_value):
+    shading_elm = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{fill_value}"/>')
+    cell._tc.get_or_add_tcPr().append(shading_elm)
 
-# --- HELPER: DOC CONTROL HEADER ---
-def add_doc_control(doc, section_name, ref_no):
+def add_header_box(doc, section, ref):
     table = doc.add_table(rows=2, cols=4)
     table.style = 'Table Grid'
-    
     # Row 1
     table.cell(0, 0).text = "Section/Process"
-    table.cell(0, 1).text = section_name
+    table.cell(0, 1).text = section
     table.cell(0, 2).text = "Doc Reference"
-    table.cell(0, 3).text = ref_no
-    
+    table.cell(0, 3).text = ref
     # Row 2
     table.cell(1, 0).text = "Implementation"
-    table.cell(1, 1).text = datetime.now().strftime("%d %B %Y")
+    table.cell(1, 1).text = "04 May 2026"
     table.cell(1, 2).text = "Version"
     table.cell(1, 3).text = "1.0"
     
@@ -40,128 +35,118 @@ def add_doc_control(doc, section_name, ref_no):
                 paragraph.runs[0].font.size = Pt(8)
     doc.add_paragraph()
 
-# --- MODULE 3: OUTPUT ENGINE (THE 100-PAGE LOGIC) ---
-def generate_pro_manual(profile, content):
+# --- THE ARCHITECT (GENERATOR) ---
+def generate_hj_jais_manual(data):
     doc = Document()
     
-    # 1. FRONT COVER (Hj Jais Style)
-    title = doc.add_heading("INTERNAL HALAL CONTROL SYSTEMS (IHCS) MANUAL", 0)
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    # --- 1. COVER PAGE ---
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run("INTERNAL HALAL CONTROL SYSTEMS (IHCS) MANUAL")
+    run.bold = True
+    run.font.size = Pt(18)
     
     doc.add_paragraph("\n" * 5)
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = p.add_run(f"PREPARED FOR:\n{profile['company_name']}\n{profile['address']}")
-    run.font.size = Pt(14)
-    run.bold = True
+    run = p.add_run(f"PREPARED BY:\n{data['c_name']}\n{data['c_address']}")
+    run.font.size = Pt(12)
     
     doc.add_page_break()
 
-    # 2. COMPANY PROFILE (Section 1)
-    add_doc_control(doc, "Company Profile", "IHCS/MAN/PROF/01")
+    # --- 2. COMPANY PROFILE (Section 1) ---
+    add_header_box(doc, "Company Profile", "IHCS/MAN/PROF/0-2021")
     doc.add_heading("1. Company Information", level=1)
     
-    info_table = doc.add_table(rows=6, cols=2)
-    info_table.style = 'Table Grid'
-    info_table.cell(0,0).text = "Business Category"
-    info_table.cell(0,1).text = profile['size']
-    info_table.cell(1,0).text = "Annual Sales"
-    info_table.cell(1,1).text = f"RM {profile['revenue']}"
-    info_table.cell(2,0).text = "No. of Employees"
-    info_table.cell(2,1).text = str(profile['staff'])
-    info_table.cell(3,0).text = "Market"
-    info_table.cell(3,1).text = profile['market']
+    table = doc.add_table(rows=1, cols=2)
+    table.style = 'Table Grid'
+    rows = [
+        ["Name", data['c_name']],
+        ["Address", data['c_address']],
+        ["Annual Sales", f"RM {data['revenue']}"],
+        ["Employees", str(data['staff'])],
+        ["Market", data['market']]
+    ]
+    for r in rows:
+        row_cells = table.add_row().cells
+        row_cells[0].text, row_cells[1].text = r
     
     doc.add_page_break()
 
-    # 3. PRODUCT LISTINGS (Section 1.2)
-    add_doc_control(doc, "Product Listings", "IHCS/MAN/LIST/01")
-    doc.add_heading("1.2 Halal Product Listings", level=1)
+    # --- 3. PRODUCT LISTING (Section 1.2) ---
+    add_header_box(doc, "Operation", "IHCS/MAN/PROF-PROD/00-2021")
+    doc.add_heading("1.2 Halal Products Listings", level=1)
     
     prod_table = doc.add_table(rows=1, cols=4)
     prod_table.style = 'Table Grid'
-    headers = ["Product Name", "Brand", "SKU", "Expiry"]
-    for i, h in enumerate(headers): prod_table.cell(0,i).text = h
+    hdr_cells = prod_table.rows[0].cells
+    for i, h in enumerate(["No", "Product Description", "Brand", "Cert Expiry"]):
+        hdr_cells[i].text = h
+        set_cell_background(hdr_cells[i], "D9D9D9")
     
-    for prod in content['products']:
-        row = prod_table.add_row().cells
-        row[0].text = prod['name']
-        row[1].text = prod['brand']
-        row[2].text = prod['sku']
-        row[3].text = str(prod['expiry'])
+    for i, p in enumerate(data['products']):
+        row_cells = prod_table.add_row().cells
+        row_cells[0].text = str(i+1)
+        row_cells[1].text = p['Description']
+        row_cells[2].text = p['Brand']
+        row_cells[3].text = p['Expiry']
 
     doc.add_page_break()
 
-    # 4. PERFORMANCE SCORING RUBRICS (Section 6)
-    add_doc_control(doc, "Evaluation & Review", "IHCS/MAN/REV/01")
-    doc.add_heading("6. IHCS Performance Scoring Rubrics", level=1)
+    # --- 4. SELF-ASSESSMENT (Section 7 - The Long One) ---
+    add_header_box(doc, "Evaluation & Review", "IHCS/MAN/EV-SELF/00-2021")
+    doc.add_heading("7. IHCS Self-Assessment Tools", level=1)
     
-    rubric_table = doc.add_table(rows=1, cols=3)
-    rubric_table.style = 'Table Grid'
-    rubric_table.cell(0,0).text = "Component"
-    rubric_table.cell(0,1).text = "Weightage"
-    rubric_table.cell(0,2).text = "Score (0-5)"
+    audit_table = doc.add_table(rows=1, cols=3)
+    audit_table.style = 'Table Grid'
+    hdr = audit_table.rows[0].cells
+    hdr[0].text, hdr[1].text, hdr[2].text = "Question", "Assessment (Y/N)", "Remarks"
+    set_cell_background(hdr[0], "D9D9D9"); set_cell_background(hdr[1], "D9D9D9"); set_cell_background(hdr[2], "D9D9D9")
     
-    components = [["Halal Policy", "20%"], ["Raw Material Control", "30%"], ["Traceability", "30%"], ["Documentation", "20%"]]
-    for comp in components:
-        row = rubric_table.add_row().cells
-        row[0].text = comp[0]
-        row[1].text = comp[1]
-        row[2].text = "___ / 5"
-
+    questions = [
+        "Company Profile complete and updated?",
+        "Halal Policy exist and exhibited?",
+        "Raw Material Masterlist updated?",
+        "SOP for Purchasing followed?",
+        "No usage of brushes from animal source?",
+        "Traceability label include batch record?",
+        "Muslim worker available at every shift?"
+    ]
+    for q in questions:
+        row = audit_table.add_row().cells
+        row[0].text = q
+    
     buffer = io.BytesIO()
     doc.save(buffer)
     buffer.seek(0)
     return buffer
 
-# --- UI LOGIC ---
-st.title("🛡️ HalalLogic 2.0: Expert System")
+# --- STREAMLIT UI ---
+st.title("🛡️ HalalLogic 3.0")
+st.markdown("Automated IHCS Manual Architect [Hj Jais Format]")
 
-with st.sidebar:
-    st.header("🏢 Deep Profiler")
-    c_name = st.text_input("Nama Syarikat", "Hj Jais Sdn Bhd")
-    c_addr = st.text_area("Alamat Premis", "Melaka, Malaysia")
-    industry = st.selectbox("Skim", ["Makanan & Minuman", "Kosmetik", "Logistik"])
-    market = st.multiselect("Pasaran", ["Malaysia", "Singapore", "Brunei", "Indonesia"], default=["Malaysia"])
-    revenue = st.number_input("Annual Sales (RM)", 12000000)
-    staff = st.number_input("Bilangan Pekerja", 30)
+col1, col2 = st.columns([1, 2])
 
-    if st.button("🚀 Start Architectural Phase"):
-        st.session_state['pro_profile'] = {
-            "company_name": c_name.upper(),
-            "address": c_addr,
-            "industry": industry,
-            "market": ", ".join(market),
-            "revenue": f"{revenue:,}",
-            "staff": staff,
-            "size": "Small" if revenue < 15000000 else "Medium/Large"
-        }
+with col1:
+    st.header("📋 Info Premis")
+    c_name = st.text_input("Nama Syarikat", "Eqmal Biotech Sdn Bhd")
+    c_addr = st.text_area("Alamat", "Batu Caves, Selangor")
+    rev = st.text_input("Annual Sales", "RM 12 Million")
+    staff = st.number_input("Bilangan Staf", 30)
+    market = st.text_input("Market", "Malaysia, Singapore")
 
-if 'pro_profile' in st.session_state:
-    st.header(f"Architecting for {st.session_state['pro_profile']['company_name']}")
-    
-    tab1, tab2, tab3 = st.tabs(["📦 Product Masterlist", "📝 SOP & Clauses", "📊 Scoring Rubrics"])
-    
-    with tab1:
-        st.subheader("Halal Product Listings")
-        product_data = [
-            {"name": "Dodol Asli Melaka", "brand": "Warisan Mak Yam", "sku": "95577600", "expiry": "2027-01-01"},
-            {"name": "Wajik Durian", "brand": "Warisan Mak Yam", "sku": "95577601", "expiry": "2027-02-01"}
-        ]
-        edited_products = st.data_editor(product_data, num_rows="dynamic")
+with col2:
+    st.header("📦 Product Masterlist")
+    st.write("Masukkan produk untuk Section 1.2 manual.")
+    items = [{"Description": "Dodol Asli", "Brand": "Warisan", "Expiry": "2027-01-01"}]
+    edited_items = st.data_editor(items, num_rows="dynamic")
 
-    with tab2:
-        st.subheader("SOP with MHMS 2020 Compliance")
-        st.write("Sistem akan automatik selaraskan dengan rujukan MPPHM.")
-        st.checkbox("Generate Sertu Program Section", value=True)
-        st.checkbox("Generate Traceability Flowchart Section", value=True)
-
-    with tab3:
-        st.subheader("IHCS Evaluation Plan")
-        st.info("Sistem akan menjana Performance Scoring Rubrics (0-5) secara automatik di lampiran.")
-
-    if st.button("🏁 Generate 100-Page Compliance Manual"):
-        with st.spinner("Executing HalalLogic Intelligence..."):
-            content = {"products": edited_products}
-            file = generate_pro_manual(st.session_state['pro_profile'], content)
-            st.download_button("📥 Download IHCS Manual (Hj Jais Edition)", data=file, file_name="IHCS_Manual_Pro.docx")
+st.divider()
+if st.button("🚀 Jana & Download Manual Lengkap"):
+    payload = {
+        "c_name": c_name.upper(), "c_address": c_addr, "revenue": rev,
+        "staff": staff, "market": market, "products": edited_items
+    }
+    docx_file = generate_hj_jais_manual(payload)
+    st.success("✅ Manual Hj Jais Edition siap dijahit!")
+    st.download_button("📥 Download IHCS Manual", data=docx_file, file_name="Manual_IHCS_Pro.docx")
