@@ -1,45 +1,33 @@
-import sqlite3
+# SOP
+c.execute("""
+CREATE TABLE IF NOT EXISTS sop (
+    user_id INTEGER,
+    purchasing TEXT,
+    receiving TEXT,
+    storage TEXT
+)
+""")
 
-def get_connection():
-    return sqlite3.connect("ihcs.db", check_same_thread=False)
+# TRACEABILITY
+c.execute("""
+CREATE TABLE IF NOT EXISTS traceability (
+    user_id INTEGER,
+    system_desc TEXT
+)
+""")
 
-def init_db():
-    conn = get_connection()
-    c = conn.cursor()
+# RECALL
+c.execute("""
+CREATE TABLE IF NOT EXISTS recall (
+    user_id INTEGER,
+    procedure TEXT
+)
+""")
 
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE,
-        password TEXT
-    )
-    """)
-
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS company (
-        user_id INTEGER,
-        name TEXT,
-        address TEXT,
-        contact TEXT
-    )
-    """)
-
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS policy (
-        user_id INTEGER,
-        content TEXT
-    )
-    """)
-
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS materials (
-        user_id INTEGER,
-        name TEXT,
-        supplier TEXT,
-        halal_cert TEXT,
-        expiry TEXT
-    )
-    """)
-
-    conn.commit()
-    conn.close()
+# EVALUATION
+c.execute("""
+CREATE TABLE IF NOT EXISTS evaluation (
+    user_id INTEGER,
+    method TEXT
+)
+""")
