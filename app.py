@@ -36,7 +36,68 @@ def show_profiler():
 # Main App Logic
 profile_data = show_profiler()
 
-if st.button("Seterusnya: Bina Struktur Manual"):
+from docx import Document
+from docx.shared import Inches
+import io
+
+# --- MODULE 3: THE OUTPUT ENGINE ---
+
+def create_docx(profile, content):
+    doc = Document()
+    
+    # 1. Muka Depan (Cover Page)
+    doc.add_heading(f"MANUAL SISTEM JAMINAN HALAL (HAS)", 0)
+    doc.add_paragraph(f"SYARIKAT: {profile['company_name']}")
+    doc.add_paragraph(f"INDUSTRI: {profile['industry']}")
+    doc.add_paragraph(f"SAIZ: {profile['size']}")
+    doc.add_page_break()
+
+    # 2. Kandungan SOP
+    doc.add_heading('SEKSYEN A: STANDARD OPERATING PROCEDURES (SOP)', level=1)
+    for sop in content['sops']:
+        doc.add_heading(sop['tajuk'], level=2)
+        doc.add_paragraph(sop['isi'])
+    
+    doc.add_page_break()
+
+    # 3. Jadual HCP (Analisis Risiko)
+    doc.add_heading('SEKSYEN B: ANALISIS HALAL CONTROL POINT (HCP)', level=1)
+    table = doc.add_table(rows=1, cols=3)
+    table.style = 'Table Grid'
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = 'Proses'
+    hdr_cells[1].text = 'Ancaman Halal'
+    hdr_cells[2].text = 'Tindakan Kawalan'
+
+    for index, row in content['hcp'].iterrows():
+        row_cells = table.add_row().cells
+        row_cells[0].text = str(row['proses'])
+        row_cells[1].text = str(row['ancaman'])
+        row_cells[2].text = str(row['kawalan'])
+
+    # Simpan ke memori untuk download
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+# --- KEMASKINI CONTROLLER DI BAWAH ---
+
+if 'profile' in st.session_state:
+    module2_data = show_architect(st.session_state['profile'])
+    
+    if st.button("Generate Full Draft Manual"):
+        with st.spinner("HalalLogic tengah 'jahit' manual kau..."):
+            # Panggil function create_docx
+            docx_output = create_docx(st.session_state['profile'], module2_data)
+            
+            st.success("✅ Manual 100% Siap Dijana!")
+            st.download_button(
+                label="📥 Download Manual HAS (.docx)",
+                data=docx_output,
+                file_name=f"Manual_HAS_{st.session_state['profile']['company_name']}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
     st.session_state['profile'] = profile_data
     st.success(f"Profil {profile_data['company_name']} disimpan. Menjana modul {profile_data['req_level']}...")
 
