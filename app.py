@@ -65,7 +65,7 @@ def show_architect(profile):
         ],
         "Logistik": [
             {"tajuk": "SOP Kawalan Kenderaan", "isi": "Kenderaan pengangkutan mestilah bersih dan tidak digunakan untuk membawa muatan haram..."},
-            {"taj_uk": "SOP Kawalan Suhu", "isi": "Suhu mestilah dipantau bagi memastikan integriti produk terjaga..."}
+            {"tajuk": "SOP Kawalan Suhu", "isi": "Suhu mestilah dipantau bagi memastikan integriti produk terjaga..."}
         ]
     }
 
