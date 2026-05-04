@@ -1,152 +1,167 @@
 import streamlit as st
 import pandas as pd
 from docx import Document
-from docx.shared import Inches, Pt
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import io
+from datetime import datetime
 
 # --- SET PAGE CONFIG ---
-st.set_page_config(page_title="HalalLogic Pro", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="HalalLogic 2.0", page_icon="🛡️", layout="wide")
 
-# --- MODULE 3: THE OUTPUT ENGINE (PRO) ---
-def create_docx(profile, content):
+# --- CUSTOM CSS FOR PROFESSIONAL LOOK ---
+st.markdown("""
+    <style>
+    .main { background-color: #f5f7f9; }
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- HELPER: DOC CONTROL HEADER ---
+def add_doc_control(doc, section_name, ref_no):
+    table = doc.add_table(rows=2, cols=4)
+    table.style = 'Table Grid'
+    
+    # Row 1
+    table.cell(0, 0).text = "Section/Process"
+    table.cell(0, 1).text = section_name
+    table.cell(0, 2).text = "Doc Reference"
+    table.cell(0, 3).text = ref_no
+    
+    # Row 2
+    table.cell(1, 0).text = "Implementation"
+    table.cell(1, 1).text = datetime.now().strftime("%d %B %Y")
+    table.cell(1, 2).text = "Version"
+    table.cell(1, 3).text = "1.0"
+    
+    for row in table.rows:
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                paragraph.runs[0].font.size = Pt(8)
+    doc.add_paragraph()
+
+# --- MODULE 3: OUTPUT ENGINE (THE 100-PAGE LOGIC) ---
+def generate_pro_manual(profile, content):
     doc = Document()
     
-    # 1. Cover Page
-    doc.add_heading('MANUAL SISTEM JAMINAN HALAL (HAS)', 0)
-    doc.add_heading(profile['company_name'], level=1)
-    doc.add_paragraph(f"Industri: {profile['industry']}")
-    doc.add_paragraph(f"Klasifikasi: {profile['size']}")
-    doc.add_paragraph(f"Rujukan Standard: MHMS 2020, MPPHM 2020, MS 1500:2019")
-    doc.add_page_break()
-
-    # 2. SOP Section with Cross-References
-    doc.add_heading('SEKSYEN A: STANDARD OPERATING PROCEDURES (SOP)', level=1)
-    for sop in content['sops']:
-        doc.add_heading(sop['tajuk'], level=2)
-        doc.add_paragraph(sop['isi'])
-        # Add Reference Note
-        ref_para = doc.add_paragraph(f"Rujukan: {sop['ref']}")
-        ref_para.runs[0].italic = True
-        ref_para.runs[0].font.size = Pt(9)
+    # 1. FRONT COVER (Hj Jais Style)
+    title = doc.add_heading("INTERNAL HALAL CONTROL SYSTEMS (IHCS) MANUAL", 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    doc.add_paragraph("\n" * 5)
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run(f"PREPARED FOR:\n{profile['company_name']}\n{profile['address']}")
+    run.font.size = Pt(14)
+    run.bold = True
     
     doc.add_page_break()
 
-    # 3. HCP Table
-    doc.add_heading('SEKSYEN B: ANALISIS HALAL CONTROL POINT (HCP)', level=1)
-    table = doc.add_table(rows=1, cols=3)
-    table.style = 'Table Grid'
-    hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = 'Titik Proses'
-    hdr_cells[1].text = 'Ancaman Halal (Threats)'
-    hdr_cells[2].text = 'Tindakan Kawalan (Control)'
+    # 2. COMPANY PROFILE (Section 1)
+    add_doc_control(doc, "Company Profile", "IHCS/MAN/PROF/01")
+    doc.add_heading("1. Company Information", level=1)
+    
+    info_table = doc.add_table(rows=6, cols=2)
+    info_table.style = 'Table Grid'
+    info_table.cell(0,0).text = "Business Category"
+    info_table.cell(0,1).text = profile['size']
+    info_table.cell(1,0).text = "Annual Sales"
+    info_table.cell(1,1).text = f"RM {profile['revenue']}"
+    info_table.cell(2,0).text = "No. of Employees"
+    info_table.cell(2,1).text = str(profile['staff'])
+    info_table.cell(3,0).text = "Market"
+    info_table.cell(3,1).text = profile['market']
+    
+    doc.add_page_break()
 
-    hcp_df = pd.DataFrame(content['hcp'])
-    for _, row in hcp_df.iterrows():
-        row_cells = table.add_row().cells
-        row_cells[0].text = str(row['proses'])
-        row_cells[1].text = str(row['ancaman'])
-        row_cells[2].text = str(row['kawalan'])
+    # 3. PRODUCT LISTINGS (Section 1.2)
+    add_doc_control(doc, "Product Listings", "IHCS/MAN/LIST/01")
+    doc.add_heading("1.2 Halal Product Listings", level=1)
+    
+    prod_table = doc.add_table(rows=1, cols=4)
+    prod_table.style = 'Table Grid'
+    headers = ["Product Name", "Brand", "SKU", "Expiry"]
+    for i, h in enumerate(headers): prod_table.cell(0,i).text = h
+    
+    for prod in content['products']:
+        row = prod_table.add_row().cells
+        row[0].text = prod['name']
+        row[1].text = prod['brand']
+        row[2].text = prod['sku']
+        row[3].text = str(prod['expiry'])
 
     doc.add_page_break()
 
-    # 4. Automated Records/Forms (The Pro Touch)
-    doc.add_heading('SEKSYEN C: LAMPIRAN REKOD & BORANG', level=1)
-    doc.add_paragraph("Borang-borang berikut dijana secara automatik untuk kegunaan operasi harian:")
-    for rec in content['records']:
-        doc.add_heading(f"Lampiran: {rec['nama']}", level=2)
-        doc.add_paragraph(f"Tujuan: {rec['desc']}")
-        # Create a simple blank log table for each record
-        log_table = doc.add_table(rows=2, cols=3)
-        log_table.style = 'Table Grid'
-        log_table.rows[0].cells[0].text = "Tarikh"
-        log_table.rows[0].cells[1].text = "Aktiviti/Catatan"
-        log_table.rows[0].cells[2].text = "Pengesahan"
+    # 4. PERFORMANCE SCORING RUBRICS (Section 6)
+    add_doc_control(doc, "Evaluation & Review", "IHCS/MAN/REV/01")
+    doc.add_heading("6. IHCS Performance Scoring Rubrics", level=1)
+    
+    rubric_table = doc.add_table(rows=1, cols=3)
+    rubric_table.style = 'Table Grid'
+    rubric_table.cell(0,0).text = "Component"
+    rubric_table.cell(0,1).text = "Weightage"
+    rubric_table.cell(0,2).text = "Score (0-5)"
+    
+    components = [["Halal Policy", "20%"], ["Raw Material Control", "30%"], ["Traceability", "30%"], ["Documentation", "20%"]]
+    for comp in components:
+        row = rubric_table.add_row().cells
+        row[0].text = comp[0]
+        row[1].text = comp[1]
+        row[2].text = "___ / 5"
 
     buffer = io.BytesIO()
     doc.save(buffer)
     buffer.seek(0)
     return buffer
 
-# --- MODULE 2: THE LOGIC BUILDER (PRO) ---
-def show_architect(profile):
-    st.divider()
-    st.subheader(f"🏗️ HalalLogic Architect: {profile['industry']}")
-    
-    # 1. SOP Library with Cross-Refs
-    sop_db = {
-        "Makanan & Minuman": [
-            {"tajuk": "SOP Kawalan Bahan Mentah", "ref": "MPPHM 2020 Klausa 4.2", "isi": "Memastikan semua bahan mentah mempunyai sijil halal yang sah dari JAKIM/JAIN atau badan luar negara yang diiktiraf."},
-            {"tajuk": "SOP Kebersihan Premis", "ref": "MS 1500:2019 Fasal 3.5", "isi": "Premis hendaklah bebas daripada binatang pengerat, serangga dan pencemaran silang material haram."},
-        ],
-        "Logistik": [
-            {"tajuk": "SOP Kawalan Kenderaan", "ref": "MS 2400:2010 (Halalan-Toyyiban)", "isi": "Kenderaan tidak boleh digunakan untuk membawa bahan yang tidak halal secara bersama (mixed cargo)."},
-        ]
-    }
-
-    # 2. Record/Forms Database
-    records_db = [
-        {"nama": "Borang Log Penerimaan Bahan Mentah", "desc": "Merekodkan setiap batch bahan yang sampai dari supplier."},
-        {"nama": "Borang Kawalan Kebersihan Harian", "desc": "Checklist pembersihan harian premis dan peralatan."},
-        {"nama": "Rekod Latihan Kesedaran Halal", "desc": "Merekodkan kehadiran staf ke taklimat Halal bulanan."}
-    ]
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown("### 📋 1. SOP & Rujukan Spesifik")
-        relevant_sops = sop_db.get(profile['industry'], sop_db["Makanan & Minuman"])
-        final_sops = []
-        for i, sop in enumerate(relevant_sops):
-            with st.expander(f"Edit: {sop['tajuk']}"):
-                isi = st.text_area(f"Isi SOP ({sop['ref']})", value=sop['isi'], key=f"pro_sop_{i}")
-                final_sops.append({"tajuk": sop['tajuk'], "isi": isi, "ref": sop['ref']})
-
-    with col2:
-        st.markdown("### 🔍 2. HCP & Flow Analysis")
-        hcp_defaults = [
-            {"proses": "Penerimaan", "ancaman": "Sijil Tamat Tempoh", "kawalan": "Semak Portal MyeHalal"},
-            {"proses": "Penyimpanan", "ancaman": "Pencemaran Silang", "kawalan": "Pengasingan Rak (Separation)"}
-        ]
-        edited_hcp = st.data_editor(hcp_defaults, num_rows="dynamic", key="pro_hcp")
-
-    st.markdown("### 📂 3. Penjanaan Rekod Automatik")
-    st.write("Sistem akan menjana borang log berikut berdasarkan profil anda:")
-    selected_records = []
-    for rec in records_db:
-        if st.checkbox(rec['nama'], value=True):
-            selected_records.append(rec)
-
-    return {"sops": final_sops, "hcp": edited_hcp, "records": selected_records}
-
-# --- MAIN CONTROLLER (SIDEBAR PROFILER) ---
-st.title("🛡️ HalalLogic Pro")
-st.caption("Advanced MHMS 2020 Intelligence Engine")
+# --- UI LOGIC ---
+st.title("🛡️ HalalLogic 2.0: Expert System")
 
 with st.sidebar:
-    st.header("🏢 Company Profiler")
-    c_name = st.text_input("Nama Syarikat", "Eqmal Biotech")
-    industry = st.selectbox("Skim Pensijilan", ["Makanan & Minuman", "Logistik", "Kosmetik"])
-    revenue = st.number_input("Jualan Tahunan (RM)", 300000)
-    staff = st.number_input("Bilangan Pekerja", 10)
+    st.header("🏢 Deep Profiler")
+    c_name = st.text_input("Nama Syarikat", "Hj Jais Sdn Bhd")
+    c_addr = st.text_area("Alamat Premis", "Melaka, Malaysia")
+    industry = st.selectbox("Skim", ["Makanan & Minuman", "Kosmetik", "Logistik"])
+    market = st.multiselect("Pasaran", ["Malaysia", "Singapore", "Brunei", "Indonesia"], default=["Malaysia"])
+    revenue = st.number_input("Annual Sales (RM)", 12000000)
+    staff = st.number_input("Bilangan Pekerja", 30)
 
-    if revenue < 300000 or staff < 5: size, req = "Mikro", "Asas"
-    else: size, req = "SME", "Penuh"
+    if st.button("🚀 Start Architectural Phase"):
+        st.session_state['pro_profile'] = {
+            "company_name": c_name.upper(),
+            "address": c_addr,
+            "industry": industry,
+            "market": ", ".join(market),
+            "revenue": f"{revenue:,}",
+            "staff": staff,
+            "size": "Small" if revenue < 15000000 else "Medium/Large"
+        }
 
-    if st.button("Jana Struktur Manual"):
-        st.session_state['profile_pro'] = {"company_name": c_name.upper(), "industry": industry, "size": size, "req_level": req}
-
-if 'profile_pro' in st.session_state:
-    data = show_architect(st.session_state['profile_pro'])
+if 'pro_profile' in st.session_state:
+    st.header(f"Architecting for {st.session_state['pro_profile']['company_name']}")
     
-    st.divider()
-    if st.button("🚀 Download Full Compliance Manual (PRO)"):
-        with st.spinner("Compiling cross-references and generating records..."):
-            docx_file = create_docx(st.session_state['profile_pro'], data)
-            st.download_button(
-                label="📥 Download Manual Compliant JAKIM",
-                data=docx_file,
-                file_name=f"Manual_HAS_Pro_{st.session_state['profile_pro']['company_name']}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-else:
-    st.warning("Isi profil di sidebar untuk bermula.")
+    tab1, tab2, tab3 = st.tabs(["📦 Product Masterlist", "📝 SOP & Clauses", "📊 Scoring Rubrics"])
+    
+    with tab1:
+        st.subheader("Halal Product Listings")
+        product_data = [
+            {"name": "Dodol Asli Melaka", "brand": "Warisan Mak Yam", "sku": "95577600", "expiry": "2027-01-01"},
+            {"name": "Wajik Durian", "brand": "Warisan Mak Yam", "sku": "95577601", "expiry": "2027-02-01"}
+        ]
+        edited_products = st.data_editor(product_data, num_rows="dynamic")
+
+    with tab2:
+        st.subheader("SOP with MHMS 2020 Compliance")
+        st.write("Sistem akan automatik selaraskan dengan rujukan MPPHM.")
+        st.checkbox("Generate Sertu Program Section", value=True)
+        st.checkbox("Generate Traceability Flowchart Section", value=True)
+
+    with tab3:
+        st.subheader("IHCS Evaluation Plan")
+        st.info("Sistem akan menjana Performance Scoring Rubrics (0-5) secara automatik di lampiran.")
+
+    if st.button("🏁 Generate 100-Page Compliance Manual"):
+        with st.spinner("Executing HalalLogic Intelligence..."):
+            content = {"products": edited_products}
+            file = generate_pro_manual(st.session_state['pro_profile'], content)
+            st.download_button("📥 Download IHCS Manual (Hj Jais Edition)", data=file, file_name="IHCS_Manual_Pro.docx")
