@@ -1,5 +1,2 @@
-streamlit
-pandas
-jinja2
-reportlab
-bcrypt
+streamlit>=1.32.0
+python-docx>=1.1.0
